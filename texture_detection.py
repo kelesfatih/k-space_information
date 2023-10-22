@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 
-from skimage import data
 from skimage.util import img_as_ubyte
 from skimage.filters.rank import entropy
 from skimage.morphology import disk
 
-
-image = img_as_ubyte(data.camera())
+img = np.array(Image.open("C1-confocal-series-0025.tif").convert("L"))
+image = img_as_ubyte(img)
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(12, 4),
                                sharex=True, sharey=True)
