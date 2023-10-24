@@ -17,6 +17,7 @@ img_obj_gs.save("C1-confocal-series-0025_grayscale.tif")
 # calculate entropy and save in virids
 img = np.array(img_obj)
 entr_img = entropy(img, disk(10))
+
 plt.imsave("C1-confocal-series-0025_entropy.tiff", entr_img, cmap='viridis')
 
 # plot images
