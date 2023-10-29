@@ -19,10 +19,21 @@ bin_width = std / 100
 x = np.arange(range_min, range_max + bin_width, bin_width)
 # pdf
 pdf = (1 / (2 * np.pi * variance)) * np.exp(-(np.square(x) / (2 * variance)))
-pdf = pdf / np.sum(pdf)
+pdf = (pdf / np.sum(pdf))
 H_kS = -2 * np.sum(pdf * np.log2(pdf))
-print(H_kS)
+print("HkS =", H_kS)
 
 # IkS
+f_image = np.fft.ifft2(img_obj_gs_arr)
+f_image_real = np.real(f_image)
+f_image_imag = np.imag(f_image)
+real_probabilities = pdf[np.searchsorted(x, f_image_real)]
+imaginary_probabilities = pdf[np.searchsorted(x, f_image_imag)]
+dc_deleted_real_p = real_probabilities.flatten()[1:]
+dc_deleted_imag_p = imaginary_probabilities.flatten()[1:]
+I_kS = sum(-np.log2(dc_deleted_real_p) - np.log2(dc_deleted_imag_p))
+print("IkS =", I_kS)
 
 # kSI = HkS - IkS
+k_SI = H_kS - I_kS
+print("kSI =", k_SI)
