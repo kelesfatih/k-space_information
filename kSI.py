@@ -1,41 +1,59 @@
-from PIL import Image
 import numpy as np
+import skimage as ski
+import matplotlib.pyplot as plt
+from PIL import Image
+from scipy.stats import norm
 
-# Import image to environment
-image = "test.tif"
-img_obj_gs = Image.open(image).convert("L")
-img_obj_gs_arr = np.array(img_obj_gs)
+# Import image as a Numpy array
+image = "vertical_gradient.tif"
+image_gs = Image.open(image).convert("L")
+image_gs_array = np.array(image_gs)
 
-# Parseval's Theorem Variance (sigma^2) and Standard Deviation (sigma)
-variance = ((sum(np.square(img_obj_gs_arr.flatten() - np.mean(img_obj_gs_arr)))) /
-            (2 * np.square(len(img_obj_gs_arr.flatten()))))
+# Parseval's Theorem Variance and Std
+variance = sum((image_gs_array.flatten() - np.mean(image_gs_array)) ** 2) / (2 * (image_gs_array.size ** 2))
 std = np.sqrt(variance)
 
-# HkS
-# -10sigma to 10sigma with 0.01sigma intervals
+# Bins for PDF
 range_min = -10 * std
 range_max = 10 * std
 bin_width = std / 100
 x = np.arange(range_min, range_max + bin_width, bin_width)
-# pdf
-pdf = (1 / (2 * np.pi * variance)) * np.exp(-(np.square(x) / (2 * variance)))
+# PDF
+pdf = norm.pdf(x, scale=std)
+# Normalise PDF
 pdf = pdf / np.sum(pdf)
-p_c = 1  # couldn't find to calculate a way
-H_kS = -2 * np.sum(p_c * np.log2(p_c))  # 147.75
-print("HkS =", H_kS)
+# HkS
+HkS = -2 * image_gs_array.size * np.sum(pdf * np.log2(pdf))
+print("HkS =", HkS)
+
+# FFT
+image_fft = np.fft.fft2(image_gs_array)
+image_fft_real = np.real(image_fft)
+image_fft_imaginary = np.imag(image_fft)
 
 # IkS
-f_image = np.fft.ifft2(img_obj_gs_arr)
-f_image_real = np.real(f_image)
-f_image_imaginary = np.imag(f_image)
-real_probabilities = pdf[np.searchsorted(x, f_image_real)]
-imaginary_probabilities = pdf[np.searchsorted(x, f_image_imaginary)]
-dc_deleted_real_p = real_probabilities.flatten()[1:]
-dc_deleted_imaginary_p = imaginary_probabilities.flatten()[1:]
-I_kS = sum(-np.log2(dc_deleted_real_p) - np.log2(dc_deleted_imaginary_p))
-print("IkS =", I_kS)
+cdf = np.cumsum(pdf)
+image_fft_real_probabilities = []
+for c in image_fft_real.flatten():  # del DC comp
+    lower_bound = c - (0.005 * std)
+    upper_bound = c + (0.005 * std)
+    lower_idx = np.searchsorted(x, lower_bound)  # I couldn't correctly index
+    upper_idx = np.searchsorted(x, upper_bound)
+    integrated_probability = cdf[upper_idx] - cdf[lower_idx]
+    image_fft_real_probabilities.append(integrated_probability)
 
-# kSI = HkS - IkS
-k_SI = H_kS - I_kS
-print("kSI =", k_SI)
+image_fft_imaginary_probabilities = []
+for c in image_fft_imaginary.flatten():
+    lower_bound = c - (0.005 * std)
+    upper_bound = c + (0.005 * std)
+    lower_idx = np.searchsorted(x, lower_bound)
+    upper_idx = np.searchsorted(x, upper_bound)
+    integrated_probability = cdf[upper_idx] - cdf[lower_idx]
+    image_fft_imaginary_probabilities.append(integrated_probability)
 
+IkS = sum(-np.log2(image_fft_real_probabilities) - np.log2(image_fft_imaginary_probabilities))
+print("IkS =", IkS)
+
+# kSI
+kSI = HkS - IkS
+print("kSI =", kSI)
