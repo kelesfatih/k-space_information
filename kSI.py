@@ -32,18 +32,18 @@ image_fft_real = np.real(image_fft)
 image_fft_imaginary = np.imag(image_fft)
 
 # IkS
-cdf = np.cumsum(pdf)
+cdf = np.cumsum(pdf)  # cumulative sum for integration
 image_fft_real_probabilities = []
-for c in image_fft_real.flatten():  # del DC comp
+for c in image_fft_real.flatten()[1:]:  # del DC comp by [1:]
     lower_bound = c - (0.005 * std)
     upper_bound = c + (0.005 * std)
-    lower_idx = np.searchsorted(x, lower_bound)  # I couldn't correctly index
+    lower_idx = np.searchsorted(x, lower_bound)  # how to index or what bin I should index
     upper_idx = np.searchsorted(x, upper_bound)
     integrated_probability = cdf[upper_idx] - cdf[lower_idx]
     image_fft_real_probabilities.append(integrated_probability)
 
 image_fft_imaginary_probabilities = []
-for c in image_fft_imaginary.flatten():
+for c in image_fft_imaginary.flatten()[1:]:
     lower_bound = c - (0.005 * std)
     upper_bound = c + (0.005 * std)
     lower_idx = np.searchsorted(x, lower_bound)
