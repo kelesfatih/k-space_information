@@ -42,13 +42,14 @@ print("IkS =", IkS)
 HkS
 """
 # Probabilities
-# cdf of the image
-cdf_image = norm.cdf(image_gs_array.flatten(), loc=0, scale=std)
+# cdf of the image with bins of std * 0.01
+cdf_image = (norm.cdf(image_gs_array.flatten() + (0.005 * std), loc=0, scale=std) -
+             norm.cdf(image_gs_array.flatten() - (0.005 * std), loc=0, scale=std))
 # divide events into bins of sigma/100
 bin_array = np.arange(image_gs_array.min(), image_gs_array.max() + 0.01 * std, 0.01 * std)
-# discretize cdf and take from -10sigma to 10sigma
-prob_entropy = np.linspace(cdf_image.min(), cdf_image.max(), bin_array.size)[np.searchsorted(bin_array, - 10 * std):
-                                                                             np.searchsorted(bin_array, 10 * std)]
+# take from -10sigma to 10sigma
+prob_entropy = cdf_image[np.searchsorted(bin_array, - 10 * std):
+                         np.searchsorted(bin_array, 10 * std)]
 HkS = -2 * image_gs_array.size * np.sum(prob_entropy * np.log2(prob_entropy + np.finfo(float).eps))
 print("HkS =", HkS)
 
