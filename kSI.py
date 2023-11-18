@@ -12,8 +12,8 @@ image_gs_array = np.array(image_gs)
 # If your file extension is tiff instead of tif change -4 to -5
 image_gs.save(f"{image[:-4]}_gs.tif", format="TIFF")
 
-# 2D Inverse FFT
-image_fft = np.fft.ifft2(image_gs_array)
+# 2D FFT
+image_fft = np.fft.fft2(image_gs_array)
 # Real and imaginary parts of FFT
 image_fft_real = np.real(image_fft)
 image_fft_imaginary = np.imag(image_fft)
@@ -26,31 +26,27 @@ std = np.sqrt(variance)
 IkS
 """
 # Probabilities
-# CDF from c - 0.005*sigma to c + 0.005*sigma for c = a or b
-# The distribution should be scaled to standard deviation
 prob_real = (norm.cdf(image_fft_real.flatten() + (0.005 * std), loc=0, scale=std) -
-             norm.cdf(image_fft_real.flatten() - (0.005 * std), loc=0, scale=std))
+             norm.cdf(image_fft_real.flatten() - (0.005 * std), loc=0, scale=std))[1:]
 prob_imag = (norm.cdf(image_fft_imaginary.flatten() + (0.005 * std), loc=0, scale=std) -
-             norm.cdf(image_fft_imaginary.flatten() - (0.005 * std), loc=0, scale=std))
+             norm.cdf(image_fft_imaginary.flatten() - (0.005 * std), loc=0, scale=std))[1:]
 
-# [1: ] was used to remove a DC component of real and imaginary part
-# Epsilon was used to escape log(0) where float64: 2.220446049250313e-16
-IkS = np.sum(- np.log2(prob_real[1:] + np.finfo(np.float64).eps) - np.log2(prob_imag[1:] + np.finfo(np.float64).eps))
+log_real = - np.log2(prob_real)
+log_imag = - np.log2(prob_imag)
+
+log_real[log_real == np.inf] = np.nan
+log_imag[log_imag == np.inf] = np.nan
+IkS = np.nansum(log_real + log_imag)
 print("IkS =", IkS)
 
 """
 HkS
 """
 # Probabilities
-# cdf of the image with bins of std * 0.01
-cdf_image = (norm.cdf(image_gs_array.flatten() + (0.005 * std), loc=0, scale=std) -
-             norm.cdf(image_gs_array.flatten() - (0.005 * std), loc=0, scale=std))
-# divide events into bins of sigma/100
-bin_array = np.arange(image_gs_array.min(), image_gs_array.max() + 0.01 * std, 0.01 * std)
-# take from -10sigma to 10sigma
-prob_entropy = cdf_image[np.searchsorted(bin_array, - 10 * std):
-                         np.searchsorted(bin_array, 10 * std)]
-HkS = -2 * image_gs_array.size * np.sum(prob_entropy * np.log2(prob_entropy + np.finfo(float).eps))
+hist, _ = np.histogram(image_gs_array.flatten())
+prob_entropy = (norm.cdf(hist + (0.005 * std), loc=0, scale=std) -
+                norm.cdf(hist - (0.005 * std), loc=0, scale=std))
+HkS = -2 * image_gs_array.size * np.nansum(prob_entropy * np.log2(prob_entropy))
 print("HkS =", HkS)
 
 """
