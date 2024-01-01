@@ -13,7 +13,7 @@ image_gs_array = np.array(image_gs)
 image_gs.save(f"{image[:-4]}_gs.tif", format="TIFF")
 
 # 2D FFT
-image_fft = np.fft.fft2(image_gs_array)
+image_fft = np.fft.ifft2(image_gs_array)
 # Real and imaginary parts of FFT
 image_fft_real = np.real(image_fft)
 image_fft_imaginary = np.imag(image_fft)
@@ -43,10 +43,9 @@ print("IkS =", IkS)
 HkS
 """
 # Probabilities
-hist, _ = np.histogram(image_gs_array.flatten())
-prob_entropy = (norm.cdf(hist + (0.005 * std), loc=0, scale=std) -
-                norm.cdf(hist - (0.005 * std), loc=0, scale=std))
-HkS = -2 * image_gs_array.size * np.nansum(prob_entropy * np.log2(prob_entropy))
+hist, _ = np.histogram(image_gs_array.flatten(), bins=2, range=(0, 2))
+normalized_hist = hist / image_gs_array.size
+HkS = -2 * image_gs_array.size * np.nansum(normalized_hist * np.log2(normalized_hist))
 print("HkS =", HkS)
 
 """
